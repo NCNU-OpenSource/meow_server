@@ -27,9 +27,9 @@ CURRENT_SESSION = {
 
 # ===== 寄信設定 =====
 # TODO：這裡換成你的 Gmail / 應用程式密碼 / 收信人
-SMTP_USER = "jueruili@gmail.com"        # 你的 Gmail 帳號
-SMTP_PASS = "duxe zlyl qyxy uyre"           # Gmail 產生的「應用程式密碼」
-USER_EMAIL ="extra099087soft@gmail.com"       # 收信人（可以跟上面同一個）
+SMTP_USER = "example@gmail.com"        # 你的 Gmail 帳號
+SMTP_PASS = "application password"           # Gmail 產生的「應用程式密碼」
+USER_EMAIL ="example@gmail.com"       # 收信人（可以跟上面同一個）
 
 def send_email(subject: str, body: str):
     """共用的寄信小工具"""
