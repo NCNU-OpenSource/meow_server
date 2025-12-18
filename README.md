@@ -41,6 +41,8 @@ SMTP（Gmail SMTP SSL）用於 Email 通知/提醒
 - Email 通知：出題即寄信；未完成則依 remind_interval 寄提醒（目前 demo 設 30 秒）
 
 ## Knowledge from Lecture
+Linux系統基本指令
+Docker
 
 
 ## Installation
