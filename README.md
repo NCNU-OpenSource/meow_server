@@ -11,7 +11,15 @@
 
 
 ## Implementation Resources
+作業系統：Ubuntu Linux（建議 20.04 / 22.04）
 
+執行環境：實體機或虛擬機（VirtualBox / VMware）
+
+開發語言：Python 3
+
+權限需求：部分功能需使用 sudo 權限（服務管理、網路設定）
+
+測試環境：單機環境進行功能測試與任務驗證
 
 ## Existing Library/Software
 
