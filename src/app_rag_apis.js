@@ -447,6 +447,10 @@ function attachRagConfigRoute(app, requireAuth, requireRole) {
     throw new Error('attachRagConfigRoute 需要有效的 app 物件');
   }
 
+  /**
+   * GET /api/teacher/rag/config
+   * 回傳 RAG 相關環境能力（供前端顯示提示）
+   */
   app.get('/api/teacher/rag/config',
     requireAuth,
     requireRole('teacher'),
