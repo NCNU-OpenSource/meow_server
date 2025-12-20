@@ -204,6 +204,8 @@ async function fetchHackMD(url) {
         : `Failed to fetch HackMD: ${error.message}`
     );
     fallbackError.statusCode = status || (isNetwork ? 502 : undefined);
+    const fallbackError = new Error(`Failed to fetch HackMD: ${error.message}`);
+    fallbackError.statusCode = status;
     throw fallbackError;
   }
 }
