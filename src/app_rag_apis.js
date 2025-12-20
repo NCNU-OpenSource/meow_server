@@ -72,6 +72,12 @@ function registerRAGApis(app, requireAuth, requireRole) {
         // 解析檔案內容
         let content = '';
         if (fileType === '.pdf') {
+          if (!rag.isPDFParsingAvailable()) {
+            const error = new Error('目前環境無法解析 PDF，請改用 Markdown / TXT，或於伺服器提供 DOMMatrix polyfill 後再試。');
+            error.statusCode = 503;
+            throw error;
+          }
+
           const buffer = await fs.readFile(filePath);
           content = await rag.parsePDF(buffer);
         } else {
@@ -106,6 +112,10 @@ function registerRAGApis(app, requireAuth, requireRole) {
       } catch (error) {
         console.error('Material upload error:', error);
         const status = error.statusCode || 500;
+        if (req.file?.path) {
+          // 清理上傳檔案以免佔用空間
+          fs.unlink(req.file.path).catch(() => {});
+        }
         res.status(status).json({ ok: false, error: error.message });
       }
     }
@@ -425,6 +435,17 @@ function registerRAGApis(app, requireAuth, requireRole) {
       }
     }
   );
+
+  attachRagConfigRoute(app, requireAuth, requireRole);
+}
+
+/**
+ * 將 RAG 設定能力路由掛載到 app（獨立定義避免 module 載入時引用 app）
+ */
+function attachRagConfigRoute(app, requireAuth, requireRole) {
+  if (!app) {
+    throw new Error('attachRagConfigRoute 需要有效的 app 物件');
+  }
 
   /**
    * GET /api/teacher/rag/config

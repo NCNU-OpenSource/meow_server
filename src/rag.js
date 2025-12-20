@@ -8,6 +8,40 @@ const fs = require('fs').promises;
 let pdfParse = null;
 let pdfParseError = null;
 
+function ensureDomPolyfills() {
+  if (typeof DOMMatrix === 'undefined') {
+    global.DOMMatrix = class DOMMatrix {
+      constructor() {}
+      multiply() { return this; }
+      translate() { return this; }
+      scale() { return this; }
+      rotate() { return this; }
+      skewX() { return this; }
+      skewY() { return this; }
+      inverse() { return this; }
+      transformPoint(point = { x: 0, y: 0 }) { return point; }
+      toFloat32Array() { return new Float32Array(16); }
+      toFloat64Array() { return new Float64Array(16); }
+    };
+  }
+
+  if (typeof Path2D === 'undefined') {
+    global.Path2D = class Path2D {};
+  }
+
+  if (typeof ImageData === 'undefined') {
+    global.ImageData = class ImageData {
+      constructor(data, width, height) {
+        this.data = data || null;
+        this.width = width || 0;
+        this.height = height || 0;
+      }
+    };
+  }
+}
+
+ensureDomPolyfills();
+
 try {
   pdfParse = require('pdf-parse');
 } catch (error) {
@@ -146,6 +180,7 @@ async function fetchHackMD(url) {
     return response.data;
   } catch (error) {
     const status = error.response?.status;
+    const networkCodes = new Set(['ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED']);
 
     if (status === 403) {
       try {
@@ -162,6 +197,13 @@ async function fetchHackMD(url) {
       throw friendlyError;
     }
 
+    const isNetwork = networkCodes.has(error.code);
+    const fallbackError = new Error(
+      isNetwork
+        ? `Failed to fetch HackMD: 網路連線失敗（${error.code || 'unknown'}），請稍後再試或確認伺服器能連線 HackMD。`
+        : `Failed to fetch HackMD: ${error.message}`
+    );
+    fallbackError.statusCode = status || (isNetwork ? 502 : undefined);
     const fallbackError = new Error(`Failed to fetch HackMD: ${error.message}`);
     fallbackError.statusCode = status;
     throw fallbackError;
