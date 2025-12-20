@@ -146,6 +146,20 @@ function parseMarkdown(markdown = '') {
 }
 
 /**
+ * 建立帶有狀態碼的錯誤物件
+ * @param {string} message - 錯誤訊息
+ * @param {number} [statusCode] - HTTP 狀態碼
+ * @returns {Error}
+ */
+function createHttpError(message, statusCode) {
+  const error = new Error(message);
+  if (statusCode) {
+    error.statusCode = statusCode;
+  }
+  return error;
+}
+
+/**
  * 從 HackMD URL 獲取內容
  * @param {string} url - HackMD URL
  * @returns {Promise<string>} - Markdown 內容
@@ -198,24 +212,25 @@ async function fetchHackMD(url) {
         const apiContent = await tryHackMDAPI();
         if (apiContent) return apiContent;
       } catch (apiError) {
-        const friendlyError = new Error(`Failed to fetch HackMD via API: ${apiError.message}`);
-        friendlyError.statusCode = apiError.response?.status || 403;
-        throw friendlyError;
+        throw createHttpError(
+          `Failed to fetch HackMD via API: ${apiError.message}`,
+          apiError.response?.status || 403
+        );
       }
 
-      const friendlyError = new Error('Failed to fetch HackMD: 403 Forbidden，請確認文件已設為公開，或在環境變數 HACKMD_TOKEN 中提供存取權杖以讀取私人文件');
-      friendlyError.statusCode = 403;
-      throw friendlyError;
+      throw createHttpError(
+        'Failed to fetch HackMD: 403 Forbidden，請確認文件已設為公開，或在環境變數 HACKMD_TOKEN 中提供存取權杖以讀取私人文件',
+        403
+      );
     }
 
     const isNetwork = networkCodes.has(error.code);
-    const finalError = new Error(
+    const message =
       isNetwork
         ? `Failed to fetch HackMD: 網路連線失敗（${error.code || 'unknown'}），請稍後再試或確認伺服器能連線 HackMD。`
-        : `Failed to fetch HackMD: ${error.message}`
-    );
-    finalError.statusCode = status || (isNetwork ? 502 : undefined);
-    throw finalError;
+        : `Failed to fetch HackMD: ${error.message}`;
+
+    throw createHttpError(message, status || (isNetwork ? 502 : undefined));
   }
 }
 
