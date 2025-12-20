@@ -355,6 +355,7 @@
             <label>選擇 PDF 檔案</label>
             <input type="file" id="pdfFile" accept=".pdf,.md,.txt" required style="padding: 0.5rem; background: white;" />
           </div>
+          <p id="pdfStatus" class="error-msg" style="color: #f59e0b;"></p>
           <button type="submit" class="submit-btn">上傳</button>
           <p id="pdfMsg" class="error-msg"></p>
         </form>
@@ -373,6 +374,7 @@
             <label>描述（選填）</label>
             <input id="hackmdDesc" placeholder="教材描述" />
           </div>
+          <p id="hackmdStatus" class="error-msg" style="color: #f59e0b;"></p>
           <button type="submit" class="submit-btn">匯入</button>
           <p id="hackmdMsg" class="error-msg"></p>
         </form>
@@ -457,31 +459,66 @@ function getDifficultyBadge(difficulty) {
 }
 
 async function loadMaterials(){
-  const r = await api("/api/teacher/materials");
-  const el = document.getElementById("matList");
-  if (r.rows.length === 0) {
-    el.innerHTML = '<div class="empty-state">目前沒有教材</div>';
-  } else {
-    el.innerHTML = r.rows.map(matCard).join("");
+  try{
+    const r = await api("/api/teacher/materials");
+    const el = document.getElementById("matList");
+    if (r.rows.length === 0) {
+      el.innerHTML = '<div class="empty-state">目前沒有教材</div>';
+    } else {
+      el.innerHTML = r.rows.map(matCard).join("");
+    }
+  }catch(err){
+    const el = document.getElementById("matList");
+    el.innerHTML = `<div class="empty-state" style="color:#ef4444;">載入教材失敗：${err?.error || '伺服器無回應，請確認服務有啟動'}</div>`;
   }
 }
 
 async function loadQuestions(){
-  const r = await api("/api/teacher/questions");
-  const tb = document.getElementById("qTbody");
-  if (r.rows.length === 0) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">目前沒有題目</td></tr>';
-  } else {
-    tb.innerHTML = r.rows.map(q => `
-      <tr>
-        <td>${q.id}</td>
-        <td>${escapeHtml(q.title)}</td>
-        <td>${getDifficultyBadge(q.difficulty)}</td>
-        <td>${escapeHtml(q.type)}</td>
-        <td><code style="font-size: 0.8rem; color: #6366f1;">${escapeHtml(q.fault_id)}</code></td>
-        <td><code style="font-size: 0.8rem; color: #10b981;">${escapeHtml(q.check_id)}</code></td>
-      </tr>
-    `).join("");
+  try{
+    const r = await api("/api/teacher/questions");
+    const tb = document.getElementById("qTbody");
+    if (r.rows.length === 0) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">目前沒有題目</td></tr>';
+    } else {
+      tb.innerHTML = r.rows.map(q => `
+        <tr>
+          <td>${q.id}</td>
+          <td>${escapeHtml(q.title)}</td>
+          <td>${getDifficultyBadge(q.difficulty)}</td>
+          <td>${escapeHtml(q.type)}</td>
+          <td><code style="font-size: 0.8rem; color: #6366f1;">${escapeHtml(q.fault_id)}</code></td>
+          <td><code style="font-size: 0.8rem; color: #10b981;">${escapeHtml(q.check_id)}</code></td>
+        </tr>
+      `).join("");
+    }
+  }catch(err){
+    const tb = document.getElementById("qTbody");
+    tb.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#ef4444;">載入題庫失敗：${err?.error || '伺服器無回應，請確認服務有啟動'}</td></tr>`;
+  }
+}
+
+async function loadRagConfig() {
+  try {
+    const r = await api("/api/teacher/rag/config");
+
+    if (!r.pdfParsingAvailable) {
+      document.getElementById("pdfStatus").textContent = "⚠️ 目前環境無法解析 PDF，請改用 Markdown / TXT；若需 PDF 解析請升級 Node 版本並提供 DOMMatrix polyfill。";
+      document.getElementById("pdfFile").setAttribute("disabled", "disabled");
+      document.querySelector('#pdfForm button[type=\"submit\"]').setAttribute("disabled", "disabled");
+    } else {
+      document.getElementById("pdfStatus").textContent = "";
+      document.getElementById("pdfFile").removeAttribute("disabled");
+      document.querySelector('#pdfForm button[type=\"submit\"]').removeAttribute("disabled");
+    }
+
+    if (!r.hackmdTokenConfigured) {
+      document.getElementById("hackmdStatus").textContent = "⚠️ 未設定 HACKMD_TOKEN，若文件未公開可能會收到 403。請將文件設為公開或提供 token。";
+    } else {
+      document.getElementById("hackmdStatus").textContent = "";
+    }
+  } catch (error) {
+    // 若設定拉取失敗，不阻塞頁面
+    console.warn("Failed to load RAG config", error);
   }
 }
 
@@ -572,7 +609,8 @@ document.getElementById("pdfForm").addEventListener("submit", async (e)=>{
     msg.style.color = "#10b981";
     await loadMaterials();
   }catch(err){
-    msg.textContent = err?.error || "上傳失敗";
+    const reason = err?.error || err?.message || "上傳失敗：伺服器無回應（請確認服務已啟動）";
+    msg.textContent = reason.includes("PDF") ? `上傳失敗：${reason}` : `上傳失敗：${reason}`;
     msg.style.color = "#ef4444";
   }
 });
@@ -601,7 +639,14 @@ document.getElementById("hackmdForm").addEventListener("submit", async (e)=>{
     msg.style.color = "#10b981";
     await loadMaterials();
   }catch(err){
-    msg.textContent = err?.error || "匯入失敗";
+    const reason = err?.error || err?.message || "匯入失敗：伺服器無回應（請確認服務已啟動）";
+    if (reason.includes("403")) {
+      msg.textContent = `匯入失敗：${reason}（請確認文件公開或設定 HACKMD_TOKEN）`;
+    } else if (reason.includes("網路連線失敗") || reason.includes("ECONN")) {
+      msg.textContent = `匯入失敗：${reason}（請確認伺服器能連線 HackMD，或稍後再試）`;
+    } else {
+      msg.textContent = `匯入失敗：${reason}`;
+    }
     msg.style.color = "#ef4444";
   }
 });
@@ -610,6 +655,7 @@ document.getElementById("hackmdForm").addEventListener("submit", async (e)=>{
   await mustTeacher();
   await loadMaterials();
   await loadQuestions();
+  await loadRagConfig();
 })();
 </script>
 </body>
