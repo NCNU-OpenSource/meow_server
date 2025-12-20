@@ -460,8 +460,15 @@ app.get('/api/teacher/questions', requireAuth, requireRole('teacher'), async (re
 // =====================
 registerRAGApis(app, requireAuth, requireRole);
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server running on http://0.0.0.0:${process.env.PORT || 3000}`);
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  const hostLabel = HOST === '0.0.0.0' ? '0.0.0.0 (all interfaces)' : HOST;
+  console.log(`Server running on http://${hostLabel}:${PORT}`);
+  if (['127.0.0.1', 'localhost'].includes(HOST)) {
+    console.log('⚠️ Server is bound to localhost; remote devices will be unable to connect. Set HOST=0.0.0.0 to allow remote access.');
+  }
   console.log(`PVE Config: ${PVE_CONFIG.host}:${PVE_CONFIG.port}`);
   console.log(`AI/RAG功能已啟用（需設定 OPENAI_API_KEY）`);
 });
