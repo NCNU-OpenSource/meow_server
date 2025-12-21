@@ -7,8 +7,8 @@ const https = require('https');
 const PVE_CONFIG = {
   host: process.env.PVE_HOST || '192.168.1.100',
   port: parseInt(process.env.PVE_PORT || '8006', 10),
-  username: process.env.PVE_USERNAME || 'root@pam',
-  password: process.env.PVE_PASSWORD || '',
+  username: process.env.PVE_USERNAME || process.env.PVE_USER || 'root@pam',
+  password: process.env.PVE_PASSWORD || process.env.PVE_PASS || '',
   tokenId: process.env.PVE_TOKEN_ID || '',
   tokenSecret: process.env.PVE_TOKEN_SECRET || '',
   realm: process.env.PVE_REALM || 'pam',
